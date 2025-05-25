@@ -19,8 +19,12 @@ A command-line Python tool to automate creation of a Steam depot Lua file with d
 * Automatically restarts after completion if requested.
 
 ---
+## Tool Screenshot
 
 ![image](https://github.com/user-attachments/assets/dd4f60f1-de5f-4adb-9179-47e31b502d15)
+
+## Extracted Game
+![image](https://github.com/user-attachments/assets/e30f722e-5f73-4ceb-b213-1c9f62329fd3)
 
 ---
 
