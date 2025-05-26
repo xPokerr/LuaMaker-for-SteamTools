@@ -4,7 +4,6 @@ Fetches VDF-formatted appinfo from Steam, parses both remote and local VDF data.
 Ignores depots that are DLCs (contain 'dlcappid') or language-specific when no config entry exists.
 Creates an output folder "[appID] GameName", saves Steam config location in a .config file,
 and writes logs directly into a logs folder.
-Includes a 1-second artificial delay to display the manifest-copying spinner.
 """
 
 import os
