@@ -5,7 +5,7 @@ A command-line Python tool to automate creation of a Steam depot Lua file with d
 
 ## Features
 
-* Fetches Steam app metadata (VDF format) via SteamUI API.
+* Fetches Steam app metadata (VDF format) via **SteamCMD**.
 * Extracts depot IDs and public manifest GIDs.
 * Reads local `config.vdf` for depot decryption keys.
 * Skips DLC or language-only depots when no key is available.
