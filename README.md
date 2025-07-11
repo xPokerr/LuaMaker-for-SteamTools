@@ -1,5 +1,6 @@
 # LuaMaker for SteamTools
 A command-line Python tool to automate creation of a Steam depot Lua file with depot decryption keys and manifest IDs.
+Easily create lua and manifest for SteamTools from your installed Steam games!
 
 ---
 
