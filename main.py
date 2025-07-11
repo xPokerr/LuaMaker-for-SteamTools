@@ -1,5 +1,5 @@
 """
-Lua Maker v1.1.1
+Lua Maker v1.1.0
 Automatically bootstraps SteamCMD, fetches appinfo, parses depot info,
 extracts decryption keys, copies manifests, and generates a Lua file.
 """
@@ -323,7 +323,7 @@ def sanitize(name):
 
 def main():
     ensure_steamcmd()
-    os.system("title LUA Maker v1.1.1")
+    os.system("title LUA Maker v1.1.0")
     scfg, depotcache = detect_steam_paths()
 
     while True:
@@ -342,7 +342,7 @@ def main():
                 ------------------------------------- 
                     https://discord.gg/FSjGzKH4Bq
                 -------------------------------------
-                    Version 1.1.1 (09/07/2025)
+                    Version 1.1.0 (09/07/2025)
 
     ======================================================================"""
         console.print(ascii_text, style="bold blue")
