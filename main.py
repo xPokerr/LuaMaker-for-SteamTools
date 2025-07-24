@@ -1,5 +1,5 @@
 """
-Lua Maker v1.1.1
+Lua Maker v1.1.2
 Automatically bootstraps SteamCMD, fetches appinfo, parses depot info,
 extracts decryption keys, copies manifests, and generates a Lua file.
 """
@@ -328,7 +328,7 @@ def sanitize(name):
 
 def main():
     ensure_steamcmd()
-    os.system("title LUA Maker v1.1.1")
+    os.system("title LUA Maker v1.1.2")
     scfg, depotcache = detect_steam_paths()
 
     while True:
@@ -347,7 +347,7 @@ def main():
                 ------------------------------------- 
                     https://discord.gg/FSjGzKH4Bq
                 -------------------------------------
-                    Version 1.1.1 (23/07/2025)
+                    Version 1.1.2 (24/07/2025)
 
     ======================================================================"""
         console.print(ascii_text, style="bold blue")
@@ -357,27 +357,67 @@ def main():
         ai = fetch_app_info(appid)
         name = extract_app_name(ai)
         depots = extract_depots(ai)
-        keys = {}
-        for d in list(depots):
-            try:
-                keys[d] = find_decryption_key(cfg_text, d)
-            except ValueError:
-                depots.pop(d)
-        out_dir = os.path.join(os.getcwd(), sanitize(f"[{appid}] {name}"))
+
+        plugin_dir  = os.path.join(scfg, "stplugin")
+        plugin_file = os.path.join(plugin_dir, f"{appid}.lua")
+        out_dir     = os.path.join(os.getcwd(), sanitize(f"[{appid}] {name}"))
         os.makedirs(out_dir, exist_ok=True)
+
+        if os.path.isfile(plugin_file):
+            console.print(f"[blue]Plugin file found at {plugin_file}; using plugin flow…[/]")
+            # 1) copy plugin .lua
+            shutil.copy2(plugin_file, os.path.join(out_dir, f"{appid}.lua"))
+            # 2) parse depot IDs from plugin
+            plugin_txt   = open(plugin_file, 'r', encoding='utf-8').read()
+            plugin_depots = re.findall(r'addappid\(\s*(\d+)', plugin_txt)
+            # 3) copy manifests for those depots
+            with Progress(SpinnerColumn(), TextColumn("{task.description}"), transient=True) as p:
+                p.add_task(description="Copying manifest files…", total=None)
+                time.sleep(1)
+                copied = copy_manifests(plugin_depots, depotcache, out_dir)
+            if copied < 1:
+                console.print("[bold red]No manifest files found for plugin depots[/]")
+                pause_on_error()
+            console.print(f"[green]Copied {copied} manifest(s) to {out_dir}[/]")
+            console.print(f"[bold green]Done! Outputs in {out_dir}[/]")
+            if console.input("Run again? (Y/N): ").strip().lower() != 'y':
+                console.print("Goodbye!")
+                sys.exit(0)
+            else:
+                continue
+
+        keys = {}
+        for did in list(depots):
+            try:
+                keys[did] = find_decryption_key(cfg_text, did)
+            except ValueError:
+                # missing key → drop from list
+                depots.pop(did)
+
+        # copy manifests from the depots we have (at least one must succeed)
         with Progress(SpinnerColumn(), TextColumn("{task.description}"), transient=True) as p:
-            p.add_task(description="Copying manifest files...", total=None)
+            p.add_task(description="Copying manifest files…", total=None)
             time.sleep(1)
             copied = copy_manifests(depots, depotcache, out_dir)
-        console.print(f"[green]Copied {copied} manifests to {out_dir}[/]")
-        if write_lua(appid, depots, keys, out_dir):
-            console.print(f"[green]Lua file at {os.path.join(out_dir, f'{appid}.lua')}[/]")
+
+        if copied < 1:
+            console.print("[bold red]No manifest files found for any depots[/]")
+            pause_on_error()
+
+        console.print(f"[green]Copied {copied} manifest(s) to {out_dir}[/]")
+
+        # write the new .lua only if we have at least one key
+        if keys:
+            if write_lua(appid, depots, keys, out_dir):
+                console.print(f"[green]Lua file at {os.path.join(out_dir, f'{appid}.lua')}[/]")
+            else:
+                console.print("[bold red]Lua write failed[/]")
         else:
-            console.print("[bold red]Lua write failed[/]")
+            console.print("[yellow]No decryption keys found; skipping Lua file write[/]")
+
         console.print(f"[bold green]Done! Outputs in {out_dir}[/]")
         if console.input("Run again? (Y/N): ").strip().lower() != 'y':
             console.print("Goodbye!")
             break
-
 if __name__ == '__main__':
     main()
