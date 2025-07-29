@@ -246,7 +246,9 @@ def find_decryption_key(cfg, did):
 
 
 def copy_manifests(depots, depotcache, out_dir, app_name=None):
+    """Copy manifest files and collect DLC names for display."""
     count = 0
+    extracted = []
     if isinstance(depots, dict):
         items = depots.items()
     else:
@@ -257,11 +259,11 @@ def copy_manifests(depots, depotcache, out_dir, app_name=None):
                 try:
                     shutil.copy2(os.path.join(depotcache, fn), os.path.join(out_dir, fn))
                     if app_name and info and info.get('name'):
-                        console.print(f"Extracting: {app_name} - {info['name']}")
+                        extracted.append(f"{app_name} - {info['name']}")
                     count += 1
                 except Exception:
                     pass
-    return count
+    return count, extracted
 
 
 def write_lua(appid, depots, keys, out_dir):
@@ -325,12 +327,16 @@ def main():
             shutil.copy2(plugin_file, os.path.join(out_dir, f"{appid}.lua"))
             # 2) parse depot IDs from plugin
             plugin_txt   = open(plugin_file, 'r', encoding='utf-8').read()
-            plugin_depots = re.findall(r'addappid\(\s*(\d+)', plugin_txt)
+            plugin_depot_ids = re.findall(r'addappid\(\s*(\d+)', plugin_txt)
+            # Map IDs to names using appinfo data if available
+            plugin_depots = {did: depots.get(did, {'name': ''}) for did in plugin_depot_ids}
             # 3) copy manifests for those depots
             with Progress(SpinnerColumn(), TextColumn("{task.description}"), transient=True) as p:
                 p.add_task(description="Copying manifest files…", total=None)
                 time.sleep(1)
-                copied = copy_manifests(plugin_depots, depotcache, out_dir, name)
+                copied, extracted = copy_manifests(plugin_depots, depotcache, out_dir, name)
+            for msg in extracted:
+                console.print(f"Extracting: {msg}")
             if copied < 1:
                 console.print("[bold red]No manifest files found for plugin depots[/]")
                 pause_on_error()
@@ -354,7 +360,9 @@ def main():
         with Progress(SpinnerColumn(), TextColumn("{task.description}"), transient=True) as p:
             p.add_task(description="Copying manifest files…", total=None)
             time.sleep(1)
-            copied = copy_manifests(depots, depotcache, out_dir, name)
+            copied, extracted = copy_manifests(depots, depotcache, out_dir, name)
+        for msg in extracted:
+            console.print(f"Extracting: {msg}")
 
         if copied < 1:
             console.print("[bold red]No manifest files found for any depots[/]")
