@@ -214,22 +214,29 @@ def extract_app_name(ai):
 
 
 def extract_depots(ai):
+    """Return dictionaries of manifest GIDs and human readable names."""
     depots = ai.get('depots')
     if not isinstance(depots, dict):
         console.print("[bold red]No depots section found[/]")
         pause_on_error()
-    result = {}
+    gids = {}
+    names = {}
     for did, info in depots.items():
-        if not isinstance(info, dict): continue
+        if not isinstance(info, dict):
+            continue
         public = info.get('manifests', {}).get('public')
-        if not isinstance(public, dict): continue
+        if not isinstance(public, dict):
+            continue
         gid = public.get('gid')
         if isinstance(gid, str) and gid:
-            result[did] = gid
-    if not result:
+            gids[did] = gid
+            nm = info.get('name') or info.get('dlcname')
+            if isinstance(nm, str) and nm:
+                names[did] = nm
+    if not gids:
         console.print("[bold red]No valid depots found[/]")
         pause_on_error()
-    return result
+    return gids, names
 
 
 def find_decryption_key(cfg, did):
@@ -240,15 +247,22 @@ def find_decryption_key(cfg, did):
     return km.group(1)
 
 
-def copy_manifests(depots, depotcache, out_dir):
+def copy_manifests(depots, depotcache, out_dir, names=None):
+    """Copy manifest files and display their friendly names when available."""
     count = 0
+    names = names or {}
     for did in depots:
         for fn in os.listdir(depotcache):
             if fn.startswith(f"{did}_") and fn.endswith('.manifest'):
                 try:
                     shutil.copy2(os.path.join(depotcache, fn), os.path.join(out_dir, fn))
                     count += 1
-                except:
+                    label = names.get(did)
+                    if label:
+                        console.print(f"[blue]Extracted {label} ({fn})[/]")
+                    else:
+                        console.print(f"[blue]Extracted manifest {fn}[/]")
+                except Exception:
                     pass
     return count
 
@@ -300,7 +314,7 @@ def main():
         cfg_text = load_config_vdf(scfg)
         ai = fetch_app_info(appid)
         name = extract_app_name(ai)
-        depots = extract_depots(ai)
+        depots, depot_names = extract_depots(ai)
 
         plugin_dir  = os.path.join(scfg, "stplugin")
         plugin_file = os.path.join(plugin_dir, f"{appid}.lua")
@@ -318,7 +332,8 @@ def main():
             with Progress(SpinnerColumn(), TextColumn("{task.description}"), transient=True) as p:
                 p.add_task(description="Copying manifest files…", total=None)
                 time.sleep(1)
-                copied = copy_manifests(plugin_depots, depotcache, out_dir)
+                copied = copy_manifests(plugin_depots, depotcache, out_dir,
+                                        {d: depot_names.get(d) for d in plugin_depots})
             if copied < 1:
                 console.print("[bold red]No manifest files found for plugin depots[/]")
                 pause_on_error()
@@ -342,7 +357,7 @@ def main():
         with Progress(SpinnerColumn(), TextColumn("{task.description}"), transient=True) as p:
             p.add_task(description="Copying manifest files…", total=None)
             time.sleep(1)
-            copied = copy_manifests(depots, depotcache, out_dir)
+            copied = copy_manifests(depots, depotcache, out_dir, depot_names)
 
         if copied < 1:
             console.print("[bold red]No manifest files found for any depots[/]")
