@@ -214,10 +214,26 @@ def extract_app_name(ai):
 
 
 def extract_depots(ai):
+    """Return mapping of depot IDs to manifest gid and optional DLC name."""
     depots = ai.get('depots')
     if not isinstance(depots, dict):
         console.print("[bold red]No depots section found[/]")
         pause_on_error()
+
+    # Gather DLC names if available. The structure of the dlc section can
+    # vary so handle simple dicts of id->name or nested dicts containing a
+    # "name" field.
+    dlc_section = ai.get('dlc', {})
+    dlc_names: dict[str, str] = {}
+    if isinstance(dlc_section, dict):
+        for k, v in dlc_section.items():
+            if isinstance(v, dict):
+                name = v.get('name')
+            else:
+                name = v
+            if isinstance(name, str) and name:
+                dlc_names[str(k)] = name
+
     result = {}
     for did, info in depots.items():
         if not isinstance(info, dict):
@@ -227,10 +243,16 @@ def extract_depots(ai):
             continue
         gid = public.get('gid')
         if isinstance(gid, str) and gid:
+            name = info.get('name') or ""
+            if not name:
+                dlc_appid = info.get('dlcappid') or info.get('dlc_appid')
+                if dlc_appid is not None:
+                    name = dlc_names.get(str(dlc_appid), "")
             result[did] = {
                 'gid': gid,
-                'name': info.get('name', '')
+                'name': name,
             }
+
     if not result:
         console.print("[bold red]No valid depots found[/]")
         pause_on_error()
