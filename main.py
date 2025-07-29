@@ -220,12 +220,17 @@ def extract_depots(ai):
         pause_on_error()
     result = {}
     for did, info in depots.items():
-        if not isinstance(info, dict): continue
+        if not isinstance(info, dict):
+            continue
         public = info.get('manifests', {}).get('public')
-        if not isinstance(public, dict): continue
+        if not isinstance(public, dict):
+            continue
         gid = public.get('gid')
         if isinstance(gid, str) and gid:
-            result[did] = gid
+            result[did] = {
+                'gid': gid,
+                'name': info.get('name', '')
+            }
     if not result:
         console.print("[bold red]No valid depots found[/]")
         pause_on_error()
@@ -240,15 +245,21 @@ def find_decryption_key(cfg, did):
     return km.group(1)
 
 
-def copy_manifests(depots, depotcache, out_dir):
+def copy_manifests(depots, depotcache, out_dir, app_name=None):
     count = 0
-    for did in depots:
+    if isinstance(depots, dict):
+        items = depots.items()
+    else:
+        items = [(d, None) for d in depots]
+    for did, info in items:
         for fn in os.listdir(depotcache):
             if fn.startswith(f"{did}_") and fn.endswith('.manifest'):
                 try:
                     shutil.copy2(os.path.join(depotcache, fn), os.path.join(out_dir, fn))
+                    if app_name and info and info.get('name'):
+                        console.print(f"Extracting: {app_name} - {info['name']}")
                     count += 1
-                except:
+                except Exception:
                     pass
     return count
 
@@ -260,9 +271,10 @@ def write_lua(appid, depots, keys, out_dir):
             f.write(f"addappid({appid})\n")
             for d in depots:
                 f.write(f"addappid({d},1,\"{keys[d]}\")\n")
-            for d, g in depots.items(): f.write(f"setManifestid({d},\"{g}\")\n")
+            for d, info in depots.items():
+                f.write(f"setManifestid({d},\"{info['gid']}\")\n")
         return True
-    except:
+    except Exception:
         return False
 
 
@@ -318,7 +330,7 @@ def main():
             with Progress(SpinnerColumn(), TextColumn("{task.description}"), transient=True) as p:
                 p.add_task(description="Copying manifest files…", total=None)
                 time.sleep(1)
-                copied = copy_manifests(plugin_depots, depotcache, out_dir)
+                copied = copy_manifests(plugin_depots, depotcache, out_dir, name)
             if copied < 1:
                 console.print("[bold red]No manifest files found for plugin depots[/]")
                 pause_on_error()
@@ -331,7 +343,7 @@ def main():
                 continue
 
         keys = {}
-        for did in list(depots):
+        for did in list(depots.keys()):
             try:
                 keys[did] = find_decryption_key(cfg_text, did)
             except ValueError:
@@ -342,7 +354,7 @@ def main():
         with Progress(SpinnerColumn(), TextColumn("{task.description}"), transient=True) as p:
             p.add_task(description="Copying manifest files…", total=None)
             time.sleep(1)
-            copied = copy_manifests(depots, depotcache, out_dir)
+            copied = copy_manifests(depots, depotcache, out_dir, name)
 
         if copied < 1:
             console.print("[bold red]No manifest files found for any depots[/]")

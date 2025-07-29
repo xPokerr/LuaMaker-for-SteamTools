@@ -12,6 +12,7 @@ Easily create lua and manifest for SteamTools from your installed Steam games!
 * Reads local `config.vdf` for depot decryption keys.
 * Skips DLC or language-only depots when no key is available.
 * Copies available manifest files into a dedicated output folder.
+* Displays DLC names when extracting manifest files (e.g. `Game - DLC`).
 * Generates a Lua file (`<APPID>.lua`) containing:
 
   * `addappid(appID)`
