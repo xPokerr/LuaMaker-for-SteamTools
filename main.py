@@ -201,62 +201,6 @@ def fetch_app_info(appid):
     except Exception as e:
         console.print(f"[bold red]Failed parsing get_appinfo.txt:[/] {e}")
         pause_on_error()
-    script_dir = os.path.dirname(__file__)
-    steamcmd_exe = os.path.join(script_dir, 'steamcmd', 'steamcmd.exe')
-    if not os.path.isfile(steamcmd_exe):
-        steamcmd_exe = shutil.which('steamcmd.exe')
-
-    if steamcmd_exe:
-        try:
-            console.print(f"[blue]Running SteamCMD at {steamcmd_exe} to fetch appinfo...[/]")
-            proc = subprocess.run([
-                steamcmd_exe,
-                '+login', 'anonymous',
-                '+app_info_update 1',
-                f'+app_info_print {appid}',
-                '+quit'
-            ], capture_output=True, text=True, timeout=60)
-            raw = proc.stdout.replace('\x00', '')
-            log_path = LOG_FILE_TEMPLATE.format(appid=appid)
-            with open(log_path, 'w', encoding='utf-8') as lf:
-                lf.write(raw)
-            console.print(f"[blue]Appinfo logged to {log_path}[/]")
-            # Extract appid block
-            key_pattern = f'"{appid}"'
-            key_index = raw.find(key_pattern)
-            if key_index == -1:
-                raise ValueError(f"No VDF section for appid {appid}")
-            start = raw.find('{', key_index)
-            brace_count = 0
-            end = None
-            for i in range(start, len(raw)):
-                if raw[i] == '{': brace_count += 1
-                elif raw[i] == '}':
-                    brace_count -= 1
-                    if brace_count == 0:
-                        end = i
-                        break
-            if end is None:
-                raise ValueError("Unmatched braces in SteamCMD output")
-            vdf_blob = raw[key_index:end+1]
-            parsed = vdf.loads(vdf_blob)
-            return parsed.get(str(appid), parsed)
-        except Exception as e:
-            console.print(f"[yellow]SteamCMD fetch error:[/] {e}")
-
-    # Fallback manual VDF
-    console.print(f"[yellow]SteamCMD not available; please save raw VDF to get_appinfo.txt[/]")
-    console.print(f"[yellow]Download from https://steamui.com/get_appinfo.php?appid={appid}[/]")
-    while not os.path.isfile("get_appinfo.txt"):
-        console.input("Press Enter once get_appinfo.txt is here...")
-    try:
-        raw = open("get_appinfo.txt", 'r', encoding='utf-8').read()
-        parsed = vdf.loads(raw)
-        os.remove("get_appinfo.txt")
-        return parsed.get(str(appid), parsed)
-    except Exception as e:
-        console.print(f"[bold red]Failed parsing get_appinfo.txt:[/] {e}")
-        pause_on_error()
 
 
 def extract_app_name(ai):
