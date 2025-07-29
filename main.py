@@ -232,6 +232,14 @@ def extract_depots(ai):
     return result
 
 
+def extract_dlc_appids(ai):
+    """Return list of DLC appids for given appinfo."""
+    dlc = ai.get('dlc')
+    if not isinstance(dlc, dict):
+        return []
+    return [did for did in dlc.keys() if str(did).isdigit()]
+
+
 def find_decryption_key(cfg, did):
     m = re.search(rf'"{did}"\s*\{{(.*?)\}}', cfg, re.DOTALL)
     if not m: raise ValueError(f"Depot {did} missing in config")
@@ -253,16 +261,21 @@ def copy_manifests(depots, depotcache, out_dir):
     return count
 
 
-def write_lua(appid, depots, keys, out_dir):
+def write_lua(appid, depots, keys, out_dir, dlc_appids=None):
+    """Write Lua file including depots and optional DLC appids."""
     fpath = os.path.join(out_dir, f"{appid}.lua")
+    dlc_appids = dlc_appids or []
     try:
         with open(fpath, 'w', encoding='utf-8') as f:
             f.write(f"addappid({appid})\n")
+            for dapp in dlc_appids:
+                f.write(f"addappid({dapp})\n")
             for d in depots:
                 f.write(f"addappid({d},1,\"{keys[d]}\")\n")
-            for d, g in depots.items(): f.write(f"setManifestid({d},\"{g}\")\n")
+            for d, g in depots.items():
+                f.write(f"setManifestid({d},\"{g}\")\n")
         return True
-    except:
+    except Exception:
         return False
 
 
@@ -301,6 +314,7 @@ def main():
         ai = fetch_app_info(appid)
         name = extract_app_name(ai)
         depots = extract_depots(ai)
+        dlc_ids = extract_dlc_appids(ai)
 
         plugin_dir  = os.path.join(scfg, "stplugin")
         plugin_file = os.path.join(plugin_dir, f"{appid}.lua")
@@ -338,6 +352,23 @@ def main():
                 # missing key → drop from list
                 depots.pop(did)
 
+        dlc_appids = []
+        for dlc_id in dlc_ids:
+            console.print(f"[blue]Processing DLC {dlc_id}[/]")
+            dlc_ai = fetch_app_info(dlc_id)
+            dlc_depots = extract_depots(dlc_ai)
+            added = False
+            for did in list(dlc_depots):
+                try:
+                    keys[did] = find_decryption_key(cfg_text, did)
+                    added = True
+                except ValueError:
+                    dlc_depots.pop(did)
+            if dlc_depots:
+                depots.update(dlc_depots)
+            if added:
+                dlc_appids.append(dlc_id)
+
         # copy manifests from the depots we have (at least one must succeed)
         with Progress(SpinnerColumn(), TextColumn("{task.description}"), transient=True) as p:
             p.add_task(description="Copying manifest files…", total=None)
@@ -352,7 +383,7 @@ def main():
 
         # write the new .lua only if we have at least one key
         if keys:
-            if write_lua(appid, depots, keys, out_dir):
+            if write_lua(appid, depots, keys, out_dir, dlc_appids):
                 console.print(f"[green]Lua file at {os.path.join(out_dir, f'{appid}.lua')}[/]")
             else:
                 console.print("[bold red]Lua write failed[/]")
