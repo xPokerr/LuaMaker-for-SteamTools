@@ -44,7 +44,7 @@ ASCII_LOGO_LINES = [
 BANNER_SUBTITLE = [
     "LUA Maker by xpokerr",
     "-------------------------------------",
-    "https://discord.gg/FSjGzKH4Bq",
+    "https://discord.gg/vKCMp9cbfG",
     "-------------------------------------",
     f"Version {APP_VERSION} (02/04/2026)",
 ]
