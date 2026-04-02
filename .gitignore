@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+.codemap/
+build/
+dist/
+logs/
+steamcmd/
+luamaker_config.json
+[[]*
+*.pyc
+*.pyo
+*.pyd
+build.spec
