@@ -6,6 +6,11 @@ It automatically fetches app metadata with SteamCMD, extracts usable depot keys 
 
 ---
 
+<img width="1115" height="628" alt="Screenshot 2026-04-02 182754" src="https://github.com/user-attachments/assets/f1a24fc6-7892-4b9b-bdb9-b7a458c59414" />
+
+
+---
+
 ## Features
 
 * Automatically bootstraps `steamcmd.exe` if it is missing.
@@ -22,6 +27,9 @@ It automatically fetches app metadata with SteamCMD, extracts usable depot keys 
   * `addappid(depotID,1,"decryptionKey")`
   * `setManifestid(depotID,"gid")`
 * Provides an animated terminal banner and a repeat prompt with default `Yes`.
+
+<img width="610" height="97" alt="Screenshot 2026-04-02 182833" src="https://github.com/user-attachments/assets/ff97b16b-4fe3-43b5-b570-b3b87d58a908" />
+<img width="618" height="324" alt="Screenshot 2026-04-02 182850" src="https://github.com/user-attachments/assets/903d58e4-800f-4781-a976-a632daf4c982" />
 
 ---
 
